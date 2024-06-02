@@ -33,3 +33,7 @@ body {
 .leaflet-top {
   z-index: 0 !important;
 }
+
+* {
+  user-select: none !important;
+}
