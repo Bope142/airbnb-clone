@@ -6,10 +6,15 @@ import useRentModal from "@/app/hooks/useRentModal";
 import Heading from "../Heading";
 import { categories } from "../NavBar/Categories";
 import CategoryInput from "../Input/CategoryInput";
-import { FieldValues, useForm } from "react-hook-form";
+import { FieldValues, useForm, SubmitHandler } from "react-hook-form";
 import CountrySelect from "../Input/CountrySelect";
 import dynamic from "next/dynamic";
 import Counter from "../Input/Counter";
+import ImageUpload from "../Input/ImageUpload";
+import Input from "../Input/Input";
+import axios from "axios";
+import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 enum STEPS {
   CATEGORY = 0,
@@ -20,9 +25,11 @@ enum STEPS {
   PRICE = 5,
 }
 function RentModal() {
+  const router = useRouter();
   const rentModal = useRentModal();
 
   const [setp, setSetp] = useState(STEPS.CATEGORY);
+  const [isLoading, setIsLoading] = useState(false);
 
   const {
     watch,
@@ -30,10 +37,11 @@ function RentModal() {
     handleSubmit,
     setValue,
     formState: { errors },
+    reset,
   } = useForm<FieldValues>({
     defaultValues: {
       category: "",
-      locationValue: null,
+      location: null,
       guestCount: 1,
       roomCount: 1,
       bathroomCount: 1,
@@ -44,7 +52,11 @@ function RentModal() {
     },
   });
   const category = watch("category");
-  const location = watch("locationValue");
+  const location = watch("location");
+  const guestCount = watch("guestCount");
+  const roomCount = watch("roomCount");
+  const bathroomCount = watch("bathroomCount");
+  const imageSrc = watch("imageSrc");
 
   const Map = useMemo(
     () =>
@@ -67,6 +79,28 @@ function RentModal() {
 
   const onNext = () => {
     setSetp((setp) => setp + 1);
+  };
+
+  const onSubmit: SubmitHandler<FieldValues> = (data) => {
+    if (setp !== STEPS.PRICE) {
+      return onNext();
+    }
+    setIsLoading(true);
+    axios
+      .post("/api/listings", data)
+      .then((response) => {
+        toast.success("Listing created successfully");
+        router.refresh();
+        reset();
+        setSetp(STEPS.CATEGORY);
+        rentModal.onClose();
+      })
+      .catch((error) => {
+        toast.error(error.message);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   };
 
   const actionLabel = useMemo(() => {
@@ -118,7 +152,7 @@ function RentModal() {
           subtitle="Help guest find you!"
         />
         <CountrySelect
-          onChange={(value) => setCustomValue("locationValue", value)}
+          onChange={(value) => setCustomValue("location", value)}
           value={location}
         />
         <Map center={location?.latlng} />
@@ -133,7 +167,90 @@ function RentModal() {
           title="Share some basics about your place"
           subtitle="What amenities do you have?"
         />
-        <Counter />
+        <Counter
+          title="Number of guests"
+          subtitle="How many guests do you allow ?"
+          value={guestCount}
+          onChange={(value) => setCustomValue("guestCount", value)}
+        />
+        <hr />
+        <Counter
+          title="Rooms"
+          subtitle="How many rooms do you have ?"
+          value={roomCount}
+          onChange={(value) => setCustomValue("roomCount", value)}
+        />
+        <hr />
+        <Counter
+          title="Bathrooms"
+          subtitle="How many bathroom do you have ?"
+          value={bathroomCount}
+          onChange={(value) => setCustomValue("bathroomCount", value)}
+        />
+      </div>
+    );
+  }
+
+  if (setp === STEPS.IMAGES) {
+    bodyContent = (
+      <div className="flex flex-col gap-8">
+        <Heading
+          title="Add a photo for your place"
+          subtitle="Show guests what your place looks like!"
+        />
+        <ImageUpload
+          value={imageSrc}
+          onChange={(value) => setCustomValue("imageSrc", value)}
+        />
+      </div>
+    );
+  }
+
+  if (setp === STEPS.DESCRIPTION) {
+    bodyContent = (
+      <div className="flex flex-col gap-8">
+        <Heading
+          title="How would you describe your place?"
+          subtitle="Short and sweet works best !"
+        />
+        <Input
+          id="title"
+          label="Title"
+          disabled={isLoading}
+          register={register}
+          errors={errors}
+          required
+        />
+        <hr />
+        <Input
+          id="description"
+          label="Description"
+          disabled={isLoading}
+          register={register}
+          errors={errors}
+          required
+        />
+      </div>
+    );
+  }
+
+  if (setp === STEPS.PRICE) {
+    bodyContent = (
+      <div className="flex flex-col gap-8">
+        <Heading
+          title="Now, set your price"
+          subtitle="How much do you charge per night?"
+        />
+        <Input
+          id="price"
+          label="Price"
+          formatPrice
+          type="number"
+          disabled={isLoading}
+          register={register}
+          errors={errors}
+          required
+        />
       </div>
     );
   }
@@ -142,7 +259,7 @@ function RentModal() {
     <Modal
       isOpen={rentModal.isOpen}
       onClose={rentModal.onClose}
-      onSubmit={onNext}
+      onSubmit={handleSubmit(onSubmit)}
       title="Airbnb your home"
       actionLable={actionLabel}
       secondaryActionLabel={secondaryActionLabel}
