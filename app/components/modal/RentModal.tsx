@@ -9,6 +9,7 @@ import CategoryInput from "../Input/CategoryInput";
 import { FieldValues, useForm } from "react-hook-form";
 import CountrySelect from "../Input/CountrySelect";
 import dynamic from "next/dynamic";
+import Counter from "../Input/Counter";
 
 enum STEPS {
   CATEGORY = 0,
@@ -132,7 +133,7 @@ function RentModal() {
           title="Share some basics about your place"
           subtitle="What amenities do you have?"
         />
-        {/* <Counter /> */}
+        <Counter />
       </div>
     );
   }
